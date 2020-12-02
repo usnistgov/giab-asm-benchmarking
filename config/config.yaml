@@ -1,0 +1,80 @@
+# v4.0 gabp pipeline
+
+##############################################
+## User Defined paramaters
+##############################################
+
+############# Assembly Paths ################
+# tsv file that defines assembly name and paths to maternal and paternal haplotypes
+# If haploid assembly, enter haploid assembly path in both maternal and paternal fields.
+assemblies: "config/samples.tsv"
+
+############ Docker Container ###############
+# name on local machine for docker container pulled from docker://jmcdani20/hap.py:v0.3.12
+docker_container: "hap.py_docker:v0.3.12"
+
+############# Gender  #######################
+# gender of sample for Dipcall, 
+# Enter "male" or "female"
+gender: "male"
+
+############# Reference  ###################
+# Reference to use for variant calling with 
+# Dipcall.
+# Enter "GRCh38" or "GRCh37"
+reference: "GRCh37"
+
+############# Benchmark  ###################
+# version number of benchmark being used, this will be used in hap.py output filename prefix
+# e.g., v4.1
+benchmark_version: "4.1"
+
+# enter ftp path to benchmark vcf.gz to be used, e.g.,
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.1_draft_benchmark.vcf.gz"
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.1_draft_benchmark.vcf.gz"
+benchmark_vcfgz: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.1_draft_benchmark.vcf.gz"
+
+# enter ftp path to corresponding vcf.gz index file, e.g.,
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.1_draft_benchmark.vcf.gz.tbi"
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.1_draft_benchmark.vcf.gz.tbi"
+benchmark_vcfgz_tbi: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.1_draft_benchmark.vcf.gz.tbi"
+
+# enter ftp path to benchmark bed.gz to be used, e.g.,
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.1_draft_benchmark.bed.gz"
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.1_draft_benchmark.bed.gz"
+benchmark_bedgz: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.1_draft_benchmark.bed.gz"
+
+# enter ftp path to corresponding bed.gz index file, e.g.,
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.1_draft_benchmark.bed.gz.tbi"
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.1_draft_benchmark.bed.gz.tbi"
+benchmark_bedgz_tbi: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.1_draft_benchmark.bed.gz.tbi"
+
+##############################################
+
+##############################################
+## Tool resources -- DO NOT CHANGE
+##############################################
+
+## Reference Genome
+ref37:
+  id: "GRCh37"
+  url: "ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/reference/phase2_reference_assembly_sequence/hs37d5.fa.gz"
+
+ref38:
+  id: "GRCh38"
+  url: "ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.15_GRCh38/seqs_for_alignment_pipelines.ucsc_ids/GCA_000001405.15_GRCh38_no_alt_analysis_set.fna.gz"
+
+## dipcall PAR file for male by reference
+par37: "src/dipcall.kit/hs37d5.PAR.bed"
+par38: "src/dipcall.kit/hs38.PAR.bed"
+
+## v2.0 Stratification files by reference
+strat37:
+    id: "GRCh37-stratifications-v2.0"
+    url: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v2.0/GRCh37/"
+    tsv: "v2.0-GRCh37-stratifications.tsv"
+strat38:
+    id: "GRCh38-stratifications-v2.0"
+    url: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v2.0/GRCh38/"
+    tsv: "v2.0-GRCh38-stratifications.tsv"
+

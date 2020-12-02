@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+resources/*
+.snakemake
+results/*
+*html
+*DS_Store
+local_scratch/*
+src/*.DS_Store

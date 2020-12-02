@@ -1,0 +1,1 @@
+The `data/` directory stores assemblies for use by the pipeline.  The structure should match that of the path in the samples.tsv file.

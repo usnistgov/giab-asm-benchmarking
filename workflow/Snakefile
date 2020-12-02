@@ -1,0 +1,402 @@
+## v4.0 gabp pipeline Snakefile
+# suggested run command: caffeinate -s snakemake --use-conda --verbose --reason -k --cores 1
+# changes: 8/26/20 added indexing for dipcall vcf.gz and hap1.bam, hap2.bam using tabix, samtools sort , index respectively
+
+
+## 1) Dendencies -- user needs to provide
+##    - Snakemake >v5.18.0
+##    - Docker and docker container  docker://jmcdani20/hap.py:v0.3.12
+##    - wget
+##    - Dipcall found in src directory
+## 2) User inputs found in "config" directory
+##    - config.yaml, user supplies the following fields: sample.tsv, gender, reference,
+##      paths to benchmarks (vcf.gz, vcf.gz.tbi, bed.gz, bed.gz.tbi), benchmark version name,
+##      and name given to docker container on local machine
+##    - samples.tsv with the following fields: assembly name (prefix), paths to maternal and
+##      paternal haplotypes
+## 3) Pipeline retreives the following based on user-defined reference
+##    - reference fasta, GRCh37 or GRCh38
+##    - v2.0 GIAB stratification for benchmarking
+## 3) Dipcall
+##    - uses docker container for k8 binaries
+##    - Dipcall file LN 40 modified (my $mm2_opt = q/-xasm5 -z200000,10000 --cs -r2k -t$(N_THREADS)/;)
+##      for better mapping to MHC, all other parameters are original default parameters for Dipcall.
+##    - Dipcall hap1.bam, hap2.bam and vcf.gz are indexed in separate rule
+## 4) hap.py
+##    - hap.py input uses modified dip.vcf --> dip.gap2homvarbutfiltered.vcf.gz
+##    - hap.py will run twice, with (dip.bed) and without target-regions
+##    - utlizes vcfeval for comparing complex variants
+## 5) Report
+##    - following run of pipeline report of configuration and DAG can be produced by running
+##      snakemake --report report_name.html
+## 6) Limitations of pipeline
+##    - While several assemblies can be specified in samples.tsv, variant calling and benchmarking
+##      can only be done for single reference, gender and bechmarks.
+##    - requires user to input FTP paths for benchmarks.  While this allows for users to use any
+##      benchmark this could leave room for input error. Paths are available in config.yaml for
+##      latest GIAB benchmarks
+##    - default is v2.0 startifications
+##    - uses docker which requires root access
+##    - currently does not incorporate R analysis, eventually have this be part of snakemake report
+
+## Import dependencies
+import pandas as pd
+from snakemake.utils import min_version
+from snakemake.remote.FTP import RemoteProvider as FTPRemoteProvider
+
+### set minimum snakemake version
+min_version("5.18.0")
+#min_version("5.20.1")
+
+## File download
+FTP = FTPRemoteProvider()
+
+## Loading config file and sample sheet
+configfile: "config/config.yaml"
+
+## Read table of samples and set wildcard prefix and constraints
+asm = pd.read_table(config["assemblies"]).set_index(["prefix"], drop = False)
+ASM_prefix = list(set(asm["prefix"]))
+wildcard_constraints:
+    prefix="|".join(ASM_prefix)
+
+## Set reference to be used. Pipeline only uses GRCh38 or GRCh37.
+if config["reference"] == "GRCh38":
+    ref_id = config["ref38"]["id"]
+    ref_url = config["ref38"]["url"]
+    strat_url = config["strat38"]["url"]
+    strat_tsv = config["strat38"]["tsv"]
+    strat_id = config["strat38"]["id"]
+    par_ref = config["par38"]
+
+elif config["reference"] == "GRCh37":
+    ref_id = config["ref37"]["id"]
+    ref_url = config["ref37"]["url"]
+    strat_url = config["strat37"]["url"]
+    strat_tsv = config["strat37"]["tsv"]
+    strat_id = config["strat37"]["id"]
+    par_ref = config["par37"]
+
+## Define basename for benchmark files
+base = os.path.basename(config["benchmark_vcfgz"])
+benchmark_name = base.split(".vcf.gz")[0]
+
+## Define target files for pipeline
+rule all:
+    input:
+        "resources/references/" + ref_id + ".fa",
+        "resources/references/" + ref_id + ".fa.fai",
+        "resources/benchmark/" + benchmark_name + ".vcf.gz",
+        "resources/benchmark/" + benchmark_name + ".vcf.gz.tbi",
+        "resources/benchmark/" + benchmark_name + ".bed.gz",
+        "resources/benchmark/" + benchmark_name+ ".bed.gz.tbi",
+        expand("results/dipcall/{prefix}.mak", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.dip.vcf.gz", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.dip.bed", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.hap1.bam", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.hap2.bam", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.dip.vcf.gz.tbi", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.hap1.sorted.bam", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.hap2.sorted.bam", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.hap1.bam.bai", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.hap2.bam.bai", prefix = ASM_prefix),
+        expand("results/dipcall/{prefix}.dip.gap2homvarbutfiltered.vcf.gz", prefix = ASM_prefix),
+        "resources/stratifications/",
+        "resources/stratifications/"+ config["reference"] + "/" + strat_tsv,
+        expand("results/happy/nontargeted/{prefix}_benchmark-v" + config["benchmark_version"] + ".extended.csv", prefix = ASM_prefix),
+        expand("results/happy/targeted/{prefix}_benchmark-v" + config["benchmark_version"] + ".extended.csv", prefix = ASM_prefix)
+
+################################################################################
+## Get and prepare reference
+################################################################################
+
+rule get_ref:
+    input: FTP.remote(ref_url)
+    output: "resources/references/" + ref_id + ".fa"
+    shell: "gunzip -c {input} > {output}"
+
+rule index_ref:
+    input: "resources/references/" + ref_id + ".fa"
+    output: "resources/references/" + ref_id + ".fa.fai"
+    wrapper: "0.61.0/bio/samtools/faidx"
+
+################################################################################
+## Get benchmark vcf.gz, bed.gz and corresponding index files
+################################################################################
+
+rule get_benchmark_vcf:
+    input: FTP.remote(config["benchmark_vcfgz"])
+    output: "resources/benchmark/" + benchmark_name + ".vcf.gz"
+    shell: "mv {input} {output}"
+
+rule get_benchmark_vcf_index:
+    input: FTP.remote(config["benchmark_vcfgz_tbi"])
+    output: "resources/benchmark/" + benchmark_name + ".vcf.gz.tbi"
+    shell: "mv {input} {output}"
+
+rule get_benchmark_bed:
+    input: FTP.remote(config["benchmark_bedgz"])
+    output: "resources/benchmark/" + benchmark_name + ".bed.gz"
+    shell: "mv {input} {output}"
+
+rule get_benchmark_bed_index:
+    input: FTP.remote(config["benchmark_bedgz_tbi"])
+    output: "resources/benchmark/" + benchmark_name+ ".bed.gz.tbi"
+    shell: "mv {input} {output}"
+
+################################################################################
+## Functions to get assembly haplotype paths from tsv
+################################################################################
+
+def get_hap1(wildcards):
+    path=asm.loc[(wildcards.prefix), "paternal_haplotype"]
+    return(path)
+
+def get_hap2(wildcards):
+    path = asm.loc[(wildcards.prefix), "maternal_haplotype"]
+    return(path)
+
+################################################################################
+## Call variants with Dipcall based on gender
+################################################################################
+
+if config["gender"] == "male" :
+    rule dipcall_makefile_male:
+        input:
+            h1=get_hap1,
+            h2=get_hap2,
+            ref= rules.get_ref.output,
+            ref_idx= rules.index_ref.output,
+            #ref="resources/references/" + ref_id + ".fa",
+            par=par_ref
+        output: "results/dipcall/{prefix}.mak"
+        params:
+            prefix= "results/dipcall/{prefix}",
+            dock=config["docker_container"]
+        shell: """
+        H1=$(basename {input.h1})
+        H2=$(basename {input.h2})
+        WD=$(pwd)
+        ASMDIR1=$WD/$(dirname {input.h1})
+        ASMDIR2=$WD/$(dirname {input.h2})
+        docker run -it \
+            -v $(pwd):/data \
+            -v $ASMDIR1:/assem1 \
+            -v $ASMDIR2:/assem2 \
+            {params.dock} /data/src/dipcall.kit/run-dipcall \
+                    -x /data/{input.par} \
+                    /data/{params.prefix} \
+                    /data/{input.ref} \
+                    /assem1/$H1 \
+                    /assem2/$H2 \
+                    > {output}
+        """
+
+elif config["gender"] == "female" :
+    rule dipcall_makefile_female:
+        input:
+            h1=get_hap1,
+            h2=get_hap2,
+            #ref="resources/references/" + ref_id + ".fa"
+            ref= rules.get_ref.output,
+            ref_idx= rules.index_ref.output
+        output: "results/dipcall/{prefix}.mak"
+        params:
+            prefix= "results/dipcall/{prefix}",
+            dock=config["docker_container"]
+        log: "results/dipcall/{prefix}_dipcall_makefile.log"
+        shell: """
+        H1=$(basename {input.h1})
+        H2=$(basename {input.h2})
+        WD=$(pwd)
+        ASMDIR1=$WD/$(dirname {input.h1})
+        ASMDIR2=$WD/$(dirname {input.h2})
+        docker run -it \
+            -v $(pwd):/data \
+            -v $ASMDIR1:/assem1 \
+            -v $ASMDIR2:/assem2 \
+            {params.dock} /data/src/dipcall.kit/run-dipcall \
+                    /data/{params.prefix} \
+                    /data/{input.ref} \
+                    /assem1/$H1 \
+                    /assem2/$H2 \
+                    > {output}
+        """
+
+rule run_dipcall:
+    input:
+        h1=get_hap1,
+        h2=get_hap2,
+        make= "results/dipcall/{prefix}.mak"
+    output:
+        vcf="results/dipcall/{prefix}.dip.vcf.gz",
+        bed="results/dipcall/{prefix}.dip.bed",
+        bam1="results/dipcall/{prefix}.hap1.bam",
+        bam2="results/dipcall/{prefix}.hap2.bam"
+    params:
+        dock=config["docker_container"]
+    log: "results/dipcall/{prefix}_dipcall.log"
+    shell: """
+    date
+    H1=$(basename {input.h1})
+    H2=$(basename {input.h2})
+    WD=$(pwd)
+    ASMDIR1=$WD/$(dirname {input.h1})
+    ASMDIR2=$WD/$(dirname {input.h2})
+
+    docker run -it \
+        -v $(pwd):/data \
+        -v $ASMDIR1:/assem1 \
+        -v $ASMDIR2:/assem2 \
+        {params.dock} make -j2 -f /data/{input.make}
+    date
+    """
+rule dip_gap2homvarbutfiltered:
+    input:
+        vcf="results/dipcall/{prefix}.dip.vcf.gz"
+        #vcf=rules.run_dipcall.output.vcf
+    output: "results/dipcall/{prefix}.dip.gap2homvarbutfiltered.vcf.gz"
+    shell: """
+    gunzip -c {input.vcf} |\
+    sed 's/1|\./1|1/' |\
+    grep -v 'HET\|GAP1\|DIP' |\
+    bgzip -c > {output}
+    """
+
+################################################################################
+## Index Dipcall output files *.bam and *dip.vcf.gz
+################################################################################
+
+rule tabix:
+    input: "results/dipcall/{prefix}.dip.vcf.gz"
+    output: "results/dipcall/{prefix}.dip.vcf.gz.tbi"
+    params:
+        "-p vcf"
+    log:
+        "results/dipcall/tabix_{prefix}.log"
+    wrapper:
+        "0.64.0/bio/tabix"
+
+rule samtools_sort:
+    input: "results/dipcall/{prefix}.{hap}.bam"
+    output: "results/dipcall/{prefix}.{hap}.sorted.bam"
+    wrapper:
+        "0.64.0/bio/samtools/sort"
+
+rule samtools_index:
+    input: "results/dipcall/{prefix}.{hap}.sorted.bam"
+    output: "results/dipcall/{prefix}.{hap}.bam.bai"
+    wrapper:
+        "0.64.0/bio/samtools/index"
+
+################################################################################
+## Get v2.0 stratifications
+################################################################################
+
+rule get_strats:
+    output: dir = directory("resources/stratifications/"),
+            tsv = "resources/stratifications/" + ref_id + "/" + strat_tsv
+    params: strats = {strat_url}
+    shell: "wget -r {params.strats} -nH --cut-dirs=5 -P {output.dir}"
+
+################################################################################
+## Benchmark variants against GIAB Benchmark with hap.py with and without
+## targeting to Dipcall output BED file
+################################################################################
+
+rule run_happy_v312_nontargeted:
+    input:
+        vcf="results/dipcall/{prefix}.dip.gap2homvarbutfiltered.vcf.gz",
+        bed="results/dipcall/{prefix}.dip.bed",
+        #vcf=rules.dip_gap2homvarbutfiltered.output,
+        #bed=rules.run_dipcall.output.bed,
+        bench_vcf = rules.get_benchmark_vcf.output,
+        bench_vcf_tbi = rules.get_benchmark_vcf_index.output,
+        bench_bed = rules.get_benchmark_bed.output,
+        bench_bed_tbi = rules.get_benchmark_bed_index.output,
+        #strat= rules.get_strats.output.tsv,
+        strat = "resources/stratifications/"+ config["reference"] + "/" + strat_tsv,
+        ref=rules.get_ref.output
+        #ref="resources/references/" + ref_id + ".fa",
+    output: "results/happy/nontargeted/{prefix}_benchmark-v" + config["benchmark_version"] + ".extended.csv"
+    priority: 1
+    params:
+        prefix = lambda wildcards, output: output [0][:-13],
+        dock=config["docker_container"],
+        threads = 12
+    log: "results/happy/nontargeted/{prefix}_happy_v312_nontargeted.log"
+    shell: """
+        date
+        VCF=$(basename {input.bench_vcf})
+        BED=$(basename {input.bench_bed})
+        STRAT=$(basename {input.strat})
+
+        docker run -it \
+        -v $(pwd):/data \
+        {params.dock} /opt/hap.py/bin/hap.py \
+        /data/resources/benchmark/$VCF \
+        /data/{input.vcf} \
+        -f /data/resources/benchmark/$BED \
+        -r /data/{input.ref} \
+        -o /data/{params.prefix} \
+        --engine=vcfeval \
+        --stratification /data/resources/stratifications/{ref_id}/$STRAT \
+        --threads {params.threads} \
+        --logfile /data/{log}
+        date
+    """
+
+rule run_happy_v312_targeted:
+    input:
+        vcf="results/dipcall/{prefix}.dip.gap2homvarbutfiltered.vcf.gz",
+        bed="results/dipcall/{prefix}.dip.bed",
+        #vcf=rules.dip_gap2homvarbutfiltered.output,
+        #bed=rules.run_dipcall.output.bed,
+        bench_vcf = rules.get_benchmark_vcf.output,
+        bench_vcf_tbi = rules.get_benchmark_vcf_index.output,
+        bench_bed = rules.get_benchmark_bed.output,
+        bench_bed_tbi = rules.get_benchmark_bed_index.output,
+        #strat= rules.get_strats.output.tsv,
+        strat = "resources/stratifications/"+ config["reference"] + "/" + strat_tsv,
+        ref=rules.get_ref.output
+        #ref="resources/references/" + ref_id + ".fa",
+    output: "results/happy/targeted/{prefix}_benchmark-v" + config["benchmark_version"] + ".extended.csv"
+    priority: 2
+    params:
+        prefix = lambda wildcards, output: output [0][:-13],
+        dock=config["docker_container"],
+        threads = 12
+    log: "results/happy/targeted/{prefix}_happy_v312_targeted.log"
+    shell: """
+        date
+        VCF=$(basename {input.bench_vcf})
+        BED=$(basename {input.bench_bed})
+        STRAT=$(basename {input.strat})
+
+        docker run -it \
+        -v $(pwd):/data \
+        {params.dock} /opt/hap.py/bin/hap.py \
+        /data/resources/benchmark/$VCF \
+        /data/{input.vcf} \
+        --target-regions /data/{input.bed} \
+        -f /data/resources/benchmark/$BED \
+        -r /data/{input.ref} \
+        -o /data/{params.prefix} \
+        --engine=vcfeval \
+        --stratification /data/resources/stratifications/{ref_id}/$STRAT \
+        --threads {params.threads} \
+        --logfile /data/{log}
+        date
+    """
+
+################################################################################
+## TODO: R summary report to handle targeted and non-targeted hap.py results
+################################################################################
+
+    # rule R_report:
+    # input:
+    #     "path/to/inputfile"
+    # output:
+    #     "path/to/report.html",
+    # script:
+    #     "path/to/report.Rmd"

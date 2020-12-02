@@ -1,0 +1,14 @@
+GABP workflow/Snakefile changelog
+
+Format: Gitlab commit SHA - version - date - changed by name
+
+fb7eba44c08f365df1ec30a456f5018462d4778a - v3.0 - 2020-08-13 - JMcDaniel
+	- initial commit
+
+f36d9acaf17473fe1a8b9dc70617bb8acd34efab - v4.0 - 2020-08-27 - JMcDaniel
+	** enhancements **
+	- new rules added to index Dipcall output dip.vcf.gz, hap1.bam and hap2.bam following
+	  Dipcall run.  New .tbi files are added to `results/dipcall` directory.  Add
+	  directive `--use-conda` to snakemake command.
+	- config.yaml was unchanged but updated version from v3 to v4 to be consistent with 
+	  snakefile. 
