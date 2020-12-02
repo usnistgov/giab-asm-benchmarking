@@ -22,7 +22,7 @@ Dependencies
 Getting Started
 -------------------
 1. Clone workflow into working directory\
-`git clone https://gitlab.nist.gov/gitlab/jennifer.mcdaniel/gabp.git path/to/workdir`\
+`git https://github.com/usnistgov/giab-asm-benchmarking.git path/to/workdir`\
 `cd path/to/workdir`
 
 2. Adjust user inputs as required (see "Pipeline Inputs")
@@ -107,6 +107,6 @@ Pipeline Limitations
 - default is v2.0 stratifications
 - uses docker which requires root access
 - currently does not incorporate R analysis, eventually have this be part of snakemake report
-- User must have wget and bgzip, possilby make conda environments for these
+- User must have wget and bgzip, possibly make conda environments for these
 
 
