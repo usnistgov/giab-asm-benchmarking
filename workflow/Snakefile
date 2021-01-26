@@ -1,7 +1,7 @@
-## v4.0 gabp pipeline Snakefile
+## v4.1 gabp pipeline Snakefile
 # suggested run command: caffeinate -s snakemake --use-conda --verbose --reason -k --cores 1
-# changes: 8/26/20 added indexing for dipcall vcf.gz and hap1.bam, hap2.bam using tabix, samtools sort , index respectively
-
+# changes: 
+# 1/26/21 found issue with sorted bam files. Dipcall appears to sort therefore removed sort and index dipcall hapX.bam directly. Also updated benchmark in config to v4.2.1
 
 ## 1) Dendencies -- user needs to provide
 ##    - Snakemake >v5.18.0
@@ -96,8 +96,6 @@ rule all:
         expand("results/dipcall/{prefix}.hap1.bam", prefix = ASM_prefix),
         expand("results/dipcall/{prefix}.hap2.bam", prefix = ASM_prefix),
         expand("results/dipcall/{prefix}.dip.vcf.gz.tbi", prefix = ASM_prefix),
-        expand("results/dipcall/{prefix}.hap1.sorted.bam", prefix = ASM_prefix),
-        expand("results/dipcall/{prefix}.hap2.sorted.bam", prefix = ASM_prefix),
         expand("results/dipcall/{prefix}.hap1.bam.bai", prefix = ASM_prefix),
         expand("results/dipcall/{prefix}.hap2.bam.bai", prefix = ASM_prefix),
         expand("results/dipcall/{prefix}.dip.gap2homvarbutfiltered.vcf.gz", prefix = ASM_prefix),
@@ -277,14 +275,8 @@ rule tabix:
     wrapper:
         "0.64.0/bio/tabix"
 
-rule samtools_sort:
-    input: "results/dipcall/{prefix}.{hap}.bam"
-    output: "results/dipcall/{prefix}.{hap}.sorted.bam"
-    wrapper:
-        "0.64.0/bio/samtools/sort"
-
 rule samtools_index:
-    input: "results/dipcall/{prefix}.{hap}.sorted.bam"
+    input: "results/dipcall/{prefix}.{hap}.bam"
     output: "results/dipcall/{prefix}.{hap}.bam.bai"
     wrapper:
         "0.64.0/bio/samtools/index"
