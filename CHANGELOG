@@ -12,3 +12,8 @@ f36d9acaf17473fe1a8b9dc70617bb8acd34efab - v4.0 - 2020-08-27 - JMcDaniel
 	  directive `--use-conda` to snakemake command.
 	- config.yaml was unchanged but updated version from v3 to v4 to be consistent with 
 	  snakefile. 
+
+5e6b87588e9f24b81c6054fd7af0b31dadee9034  - v4.1 - 2021-01-26 - JMcDaniel
+	** fix issues **
+	- removed sort of .bam. Dipcall appears to sort and samtools sort was causing indexing issue.  Index is now done directly for dipcall .bam files
+	- updated benchmark paths in config, now using v4.2.1
