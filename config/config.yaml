@@ -14,15 +14,15 @@ assemblies: "config/samples.tsv"
 docker_container: "hap.py_docker:v0.3.12"
 
 ############# Gender  #######################
-# gender of sample for Dipcall, 
+# gender of sample for Dipcall,
 # Enter "male" or "female"
 gender: "male"
 
 ############# Reference  ###################
-# Reference to use for variant calling with 
+# Reference to use for variant calling with
 # Dipcall.
 # Enter "GRCh38" or "GRCh37"
-reference: " "
+reference: "GRCh38"
 
 ############# Benchmark  ###################
 # version number of benchmark being used, this will be used in hap.py output filename prefix
@@ -32,22 +32,17 @@ benchmark_version: "4.2.1"
 # enter ftp path to benchmark vcf.gz to be used, e.g.,
 # "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.2.1_benchmark.vcf.gz"
 # "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz"
-benchmark_vcfgz: " "
+benchmark_vcfgz: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz"
 
 # enter ftp path to corresponding vcf.gz index file, e.g.,
 # "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.2.1_benchmark.vcf.gz.tbi"
 # "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz.tbi"
-benchmark_vcfgz_tbi: " "
+benchmark_vcfgz_tbi: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz.tbi"
 
-# enter ftp path to benchmark bed.gz to be used, e.g.,
-# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.2.1_benchmark_noinconsistent.bed.gz"
-# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed.gz"
-benchmark_bedgz: " "
-
-# enter ftp path to corresponding bed.gz index file, e.g.,
-# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.2.1_benchmark_noinconsistent.bed.gz.tbi"
-# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed.gz.tbi"
-benchmark_bedgz_tbi: " "
+# enter ftp path to benchmark bed to be used, e.g.,
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh37/HG002_GRCh37_1_22_v4.2.1_benchmark_noinconsistent.bed"
+# "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed"
+benchmark_bed: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/AshkenazimTrio/HG002_NA24385_son/latest/GRCh38/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed"
 
 ##############################################
 
@@ -77,4 +72,3 @@ strat38:
     id: "GRCh38-stratifications-v2.0"
     url: "ftp://ftp-trace.ncbi.nlm.nih.gov/ReferenceSamples/giab/release/genome-stratifications/v2.0/GRCh38/"
     tsv: "v2.0-GRCh38-stratifications.tsv"
-
