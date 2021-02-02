@@ -1,7 +1,9 @@
 ## v4.1 gabp pipeline Snakefile
 # suggested run command: caffeinate -s snakemake --use-conda --verbose --reason -k --cores 1
-# changes: 
-# 1/26/21 found issue with sorted bam files. Dipcall appears to sort therefore removed sort and index dipcall hapX.bam directly. Also updated benchmark in config to v4.2.1
+# changes:
+# 8/26/20 added indexing for dipcall vcf.gz and hap1.bam, hap2.bam using tabix, samtools sort , index respectively (v4.0)
+# 1/26/21 and 1/29/21 found issue with sorted bam files. Dipcall appears to sort therefore removed sort and index dipcall hapX.bam directly
+# also adjused benchmark files to most recent benchmark and changed input to use .bed rather than bed.gz (v4.1)
 
 ## 1) Dendencies -- user needs to provide
 ##    - Snakemake >v5.18.0
@@ -10,7 +12,7 @@
 ##    - Dipcall found in src directory
 ## 2) User inputs found in "config" directory
 ##    - config.yaml, user supplies the following fields: sample.tsv, gender, reference,
-##      paths to benchmarks (vcf.gz, vcf.gz.tbi, bed.gz, bed.gz.tbi), benchmark version name,
+##      paths to benchmarks (vcf.gz, vcf.gz.tbi and .bed), benchmark version name,
 ##      and name given to docker container on local machine
 ##    - samples.tsv with the following fields: assembly name (prefix), paths to maternal and
 ##      paternal haplotypes
@@ -88,8 +90,7 @@ rule all:
         "resources/references/" + ref_id + ".fa.fai",
         "resources/benchmark/" + benchmark_name + ".vcf.gz",
         "resources/benchmark/" + benchmark_name + ".vcf.gz.tbi",
-        "resources/benchmark/" + benchmark_name + ".bed.gz",
-        "resources/benchmark/" + benchmark_name+ ".bed.gz.tbi",
+        "resources/benchmark/" + benchmark_name + ".bed",
         expand("results/dipcall/{prefix}.mak", prefix = ASM_prefix),
         expand("results/dipcall/{prefix}.dip.vcf.gz", prefix = ASM_prefix),
         expand("results/dipcall/{prefix}.dip.bed", prefix = ASM_prefix),
@@ -119,7 +120,7 @@ rule index_ref:
     wrapper: "0.61.0/bio/samtools/faidx"
 
 ################################################################################
-## Get benchmark vcf.gz, bed.gz and corresponding index files
+## Get benchmark vcf.gz and .bed
 ################################################################################
 
 rule get_benchmark_vcf:
@@ -133,13 +134,8 @@ rule get_benchmark_vcf_index:
     shell: "mv {input} {output}"
 
 rule get_benchmark_bed:
-    input: FTP.remote(config["benchmark_bedgz"])
-    output: "resources/benchmark/" + benchmark_name + ".bed.gz"
-    shell: "mv {input} {output}"
-
-rule get_benchmark_bed_index:
-    input: FTP.remote(config["benchmark_bedgz_tbi"])
-    output: "resources/benchmark/" + benchmark_name+ ".bed.gz.tbi"
+    input: FTP.remote(config["benchmark_bed"])
+    output: "resources/benchmark/" + benchmark_name + ".bed"
     shell: "mv {input} {output}"
 
 ################################################################################
