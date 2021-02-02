@@ -17,3 +17,7 @@ f36d9acaf17473fe1a8b9dc70617bb8acd34efab - v4.0 - 2020-08-27 - JMcDaniel
 	** fix issues **
 	- removed sort of .bam. Dipcall appears to sort and samtools sort was causing indexing issue.  Index is now done directly for dipcall .bam files
 	- updated benchmark paths in config, now using v4.2.1
+
+9185ab36438d3e5f5bf067d75f0cd1b7198394c5 - v4.1 - 2021-02-02 - JMcDaniel
+	** update input file **
+	-benchmark bed is no longer zipped, changed to just .bed and removed .tbi.  Also updated config for bed file.
